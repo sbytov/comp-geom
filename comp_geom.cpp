@@ -1,12 +1,12 @@
 // comp_geom.cpp : Defines the entry point for the console application.
 //
-#include "pch.h"
 #include <vector>
 #include <queue>
 #include <iostream>
 #include <functional>
 #include <map>
 #include <set>
+#include <cassert>
 
 
 struct point {
@@ -19,9 +19,40 @@ struct segment {
 	point end;
 
 	float y(float x) const {
-		float m = (end.y - begin.y) / (end.x - begin.x);
+		float m = slope();
 		float y = begin.y + (x - begin.x)*m;
 		return y;
+	}
+
+	float slope() const {
+		return (end.y - begin.y) / (end.x - begin.x);
+	}
+
+	std::pair<bool, point> intersection(const segment& s) {
+		float dx = end.x - begin.x;
+		float dy = end.y - begin.y;
+		float s_dx = s.end.x - s.begin.x;
+		float s_dy = s.end.y - s.begin.y;
+		float xdiff = begin.x - s.begin.x;
+		float ydiff = begin.y - s.begin.y;
+
+		float s_numer = -ydiff*dx + xdiff*dy;
+		float s_denom = s_dx*dy - s_dy*dx;
+		float s_p = s_numer / s_denom;
+
+		float numer = ydiff*s_dx - xdiff*s_dy;
+		float denom = dx*s_dy - dy*s_dx;
+		float  p = numer / denom;
+
+
+
+		bool intersect = p >= 0 && p <= 1 && s_p >= 0 && s_p <= 1;
+		point ip;
+		if (intersect) {
+			ip.x = begin.x * (1 - p) + end.x * p;
+			ip.y = begin.y * (1 - p) + end.y * p;
+		}
+		return{ intersect, ip };
 	}
 };
 
@@ -38,7 +69,7 @@ struct event {
 	segment* s2;
 };
 
-std::set<event> pq;
+std::multiset<event> pq;
 int cur_x;
 struct status_comparator {
 	bool operator() (segment* const& lhs, segment* const& rhs) const {
@@ -122,10 +153,80 @@ void add_segments(convex& c) {
 
 void calc_intersection(const segment& s1, const segment& s2) {
     std::cout << "test intersection: " << s1 << " and " << s2 << std::endl;
+
+
 }
 
 int main()
 {
+//intersection tests
+	segment s1 = { point{0,0}, point{10,10} };
+	auto ip = s1.intersection({ point{ 0,0 }, point{ 10,0 } });
+	assert(ip.first == true);
+	assert(ip.second.x == 0);
+	assert(ip.second.y == 0);
+	ip = s1.intersection({ point{ 0,10 }, point{ 10,10 } });
+	assert(ip.first == true);
+	assert(ip.second.x == 10);
+	assert(ip.second.y == 10);
+	ip = s1.intersection({ point{ 0,5 }, point{ 10,5 } });
+	assert(ip.first == true);
+	assert(ip.second.x == 5);
+	assert(ip.second.y == 5);
+	ip = s1.intersection({ point{ 0,0 }, point{ 0,10 } });
+	assert(ip.first == true);
+	assert(ip.second.x == 0);
+	assert(ip.second.y == 0);
+	ip = s1.intersection({ point{ 10,0 }, point{ 10,10 } });
+	assert(ip.first == true);
+	assert(ip.second.x == 10);
+	assert(ip.second.y == 10);
+
+	ip = s1.intersection({ point{ 8,2 }, point{ 8,9 } });
+	assert(ip.first == true);
+	assert(ip.second.x == 8);
+	assert(ip.second.y == 8);
+
+	ip = s1.intersection({ point{ 2,4 }, point{ 5,4 } });
+	assert(ip.first == true);
+	assert(ip.second.x == 4);
+	assert(ip.second.y == 4);
+
+	ip = s1.intersection({ point{ 10,0 }, point{ 0,10 } });
+	assert(ip.first == true);
+	assert(ip.second.x == 5);
+	assert(ip.second.y == 5);
+
+	ip = s1.intersection({ point{ -1,-1 }, point{ 10,-1 } });
+	assert(ip.first == false);
+	ip = s1.intersection({ point{ 0,11 }, point{ 11,11 } });
+	assert(ip.first == false);
+	ip = s1.intersection({ point{ -1,-1 }, point{ -1,10 } });
+	assert(ip.first == false);
+	ip = s1.intersection({ point{ 11,1 }, point{ 11,11 } });
+	assert(ip.first == false);
+
+	ip = s1.intersection({ point{ 11,11 }, point{ 12,12 } });
+	assert(ip.first == false);
+	ip = s1.intersection({ point{ -2,-2 }, point{ -1,-1 } });
+	assert(ip.first == false);
+
+	ip = s1.intersection({ point{ 10,10 }, point{ 12,0 } });
+	assert(ip.first == true);
+	assert(ip.second.x == 10);
+
+	ip = s1.intersection({ point{ -2, 10 }, point{ 0,0 } });
+	assert(ip.first == true);
+	assert(ip.second.x == 0);
+
+	//ip = s1.intersection({ point{ 10,10 }, point{ 12,12 } });
+	//assert(ip.first == true);
+	//assert(ip.second.x == 10);
+	//ip = s1.intersection({ point{ -2,-2 }, point{ 0,0 } });
+	//assert(ip.first == true);
+	//assert(ip.second.x == 0);
+//end intersection tests
+
 	convex c1 = { { point{0,0}, point{10,10}, point{20, 0} } };
 	convex c2 = { { point{1,1}, point{11,11}, point{21, 1} } };
 	add_segments(c1);
@@ -147,7 +248,6 @@ int main()
                     auto it = res.first;
                     if (it != status.begin())
                     {
-
                         auto prev = it;
                         prev--;
                         calc_intersection(**it, **(prev));
