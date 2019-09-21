@@ -1,7 +1,6 @@
 // comp_geom.cpp : Defines the entry point for the console application.
 //
-
-#include "stdafx.h"
+#include "pch.h"
 #include <vector>
 #include <queue>
 #include <iostream>
@@ -51,7 +50,7 @@ struct status_comparator {
 		return lhs_y > rhs_y;
 	}
 };
-std::multiset<segment*, status_comparator> status;
+std::set<segment*, status_comparator> status;
 
 
 bool operator==(const point& lhs, const point& rhs) {
@@ -91,6 +90,12 @@ std::ostream & operator << (std::ostream &out, const point &c)
 	return out;
 }
 
+std::ostream & operator << (std::ostream &out, const segment &c)
+{
+    out << "[" << c.begin << " to " << c.end << "]" << std::endl;
+    return out;
+}
+
 struct convex {
 	convex(std::vector<point> points) {
 		for (int i = 0; i < points.size()-1; i++) {
@@ -115,6 +120,10 @@ void add_segments(convex& c) {
 	}
 }
 
+void calc_intersection(const segment& s1, const segment& s2) {
+    std::cout << "test intersection: " << s1 << " and " << s2 << std::endl;
+}
+
 int main()
 {
 	convex c1 = { { point{0,0}, point{10,10}, point{20, 0} } };
@@ -132,7 +141,28 @@ int main()
 		switch (e->k) {
 			case kind::begin:
 			{
-				status.insert(e->s1);
+				auto res = status.insert(e->s1);
+                if (res.second)
+                {
+                    auto it = res.first;
+                    if (it != status.begin())
+                    {
+
+                        auto prev = it;
+                        prev--;
+                        calc_intersection(**it, **(prev));
+                    } 
+                    if (it != (--status.end()))
+                    {
+                        auto next = it;
+                        next++;
+                        calc_intersection(**it, **(next));
+                    }
+                }
+                else
+                {
+                    std::cout << "WARNING: segment insertion failed as such segment already exists, this is unexpected" << std::endl;
+                }
 			}
 			break;
 			case kind::end:
