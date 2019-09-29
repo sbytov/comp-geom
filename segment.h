@@ -23,7 +23,7 @@ struct segment {
 		return (end.y - begin.y) / (end.x - begin.x);
 	}
 
-	std::tuple<bool, point, point> intersection(const segment& s) {
+	std::tuple<bool, point, point> intersection(const segment& s) const {
 		float dx = end.x - begin.x;
 		float dy = end.y - begin.y;
 		float s_dx = s.end.x - s.begin.x;
