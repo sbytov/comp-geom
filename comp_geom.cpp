@@ -7,6 +7,8 @@
 #include <map>
 #include <set>
 #include <cassert>
+#include <utility>
+#include <algorithm>
 #include "segment.h"
 
 enum class kind {
@@ -99,16 +101,19 @@ void calc_intersection(segment& s1, segment& s2) {
 	auto i = s1.intersection(s2);
 	if (std::get<0>(i)) {
 		auto i_start = std::get<1>(i);
-		if (i_start.x > cur_x)
+		if (i_start.x >= cur_x)
 		{
 			if (i_start == s1.begin /*|| i_start == s1.end*/
 				|| i_start == s2.begin /*|| i_start == s2.end*/) {
+                std::cout << "+++ add intersection at " << i_start;
 				intersections.push_back(i_start);
 			} else {
 				auto i_end = std::get<2>(i);
 				pq.insert(event{kind::intersect, i_start, &s1, &s2});
+                std::cout << "+++ add intersection at " << i_start;
 				if (!(i_start == i_end)) {
 					pq.insert(event{kind::intersect, i_end, &s1, &s2});
+                    std::cout << "+++ add intersection at " << i_end;
 				}
 			}
 		}
@@ -131,7 +136,9 @@ int main()
 	}
 
 	for (auto e = pq.begin(); e != pq.end(); e++) {
+        auto prev_x = cur_x;
 		cur_x = (float)e->p.x;
+        std::cout << "--------------- cur_x is " << cur_x << "--------------------" << std::endl;
 		switch (e->k) {
 			case kind::begin:
 			{
@@ -171,7 +178,8 @@ int main()
 			case kind::intersect:
 			{	
 				intersections.push_back(e->p);
-				cur_x -= 1;
+                auto temp_curx = cur_x;
+                cur_x = (prev_x + cur_x)/2;
 				auto it1 = status.find(e->s1);
 				auto it2 = status.find(e->s2);
 				bool order = e->s1->y(cur_x) > e->s2->y(cur_x);
@@ -181,16 +189,21 @@ int main()
 					upper = std::prev(it1);
 				if (it2 != status.end())
 					lower = std::next(it2);
-				std::swap((segment_ptr)*it1, (segment_ptr)*it2);
-				cur_x += 1;
+				std::swap((segment_ptr&)*it1, (segment_ptr&)*it2);
+                cur_x = temp_curx;
 				if (upper != status.end())
-					calc_intersection(**it2, **upper);
+					calc_intersection(**it1, **upper);
 				if (lower != status.end())
-					calc_intersection(**it1, **lower);
+					calc_intersection(**it2, **lower);
 			}
 			break;
 		}
 	}
 
+
+    for (auto& i : intersections)
+    {
+        std::cout << i << std::endl;
+    }
     return 0;
 }
